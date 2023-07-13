@@ -5,6 +5,9 @@ import singer
 from singer import metadata
 
 
+class Constants:
+    QUERY_BATCH_SIZE = 50000
+
 def write_schema_message(catalog_entry, bookmark_properties=None):
     if bookmark_properties is None:
         bookmark_properties = []

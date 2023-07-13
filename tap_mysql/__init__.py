@@ -10,7 +10,7 @@ from singer.catalog import Catalog
 
 from tap_mysql.connection import connect_with_backoff, MySQLConnection, fetch_server_id, MYSQL_ENGINE
 from tap_mysql.discover_utils import discover_catalog, resolve_catalog
-from tap_mysql.stream_utils import write_schema_message
+from tap_mysql.stream_utils import write_schema_message, Constants
 from tap_mysql.sync_strategies import binlog
 from tap_mysql.sync_strategies import common
 from tap_mysql.sync_strategies import full_table

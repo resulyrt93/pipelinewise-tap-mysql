@@ -819,7 +819,7 @@ def create_binlog_stream_reader(
         'pymysql_wrapper': make_connection_wrapper(config),
         'is_mariadb': connection.MARIADB_ENGINE == engine,
         'server_id': server_id,  # slave server ID
-        'report_slave': socket.gethostname() or 'pipelinewise',  # this is so this slave appears in SHOW SLAVE HOSTS;
+        'report_slave': socket.gethostname() or 'northstar',
         'only_events': [WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent],
     }
 

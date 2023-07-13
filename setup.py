@@ -5,13 +5,13 @@ from setuptools import setup
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setup(name='pipelinewise-tap-mysql',
-      version='1.5.5',
-      description='Singer.io tap for extracting data from MySQL & MariaDB - PipelineWise compatible',
+setup(name='northstar-tap-mysql',
+      version='1.5.8',
+      description='Singer.io tap for extracting data from MySQL & MariaDB - Northstar compatible',
       long_description=long_description,
       long_description_content_type='text/markdown',
       author='Wise',
-      url='https://github.com/transferwise/pipelinewise-tap-mysql',
+      url='https://github.com/resulyrt93/pipelinewise-tap-mysql',
       classifiers=[
           'License :: OSI Approved :: GNU Affero General Public License v3',
           'Programming Language :: Python :: 3 :: Only'
