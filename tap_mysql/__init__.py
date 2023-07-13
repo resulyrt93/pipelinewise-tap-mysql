@@ -373,6 +373,8 @@ def do_sync(mysql_conn, config, catalog, state):
     config['use_gtid'] = config.get('use_gtid', False)
     config['engine'] = config.get('engine', MYSQL_ENGINE).lower()
 
+    Constants.QUERY_BATCH_SIZE = config.get('query_batch_size', Constants.QUERY_BATCH_SIZE)
+
     non_binlog_catalog = get_non_binlog_streams(mysql_conn, catalog, config, state)
     binlog_catalog = get_binlog_streams(mysql_conn, catalog, config, state)
 
