@@ -1,5 +1,7 @@
 # pylint: disable=missing-docstring,too-many-locals
 import copy
+import os
+
 import pymysql
 import singer
 
@@ -15,6 +17,7 @@ from tap_mysql.sync_strategies import binlog
 from tap_mysql.sync_strategies import common
 from tap_mysql.sync_strategies import full_table
 from tap_mysql.sync_strategies import incremental
+from tap_mysql.sync_strategies.common import TEMP_DATA_DIRECTORY
 
 LOGGER = get_logger('tap_mysql')
 
@@ -373,7 +376,12 @@ def do_sync(mysql_conn, config, catalog, state):
     config['use_gtid'] = config.get('use_gtid', False)
     config['engine'] = config.get('engine', MYSQL_ENGINE).lower()
 
-    Constants.QUERY_BATCH_SIZE = config.get('query_batch_size', Constants.QUERY_BATCH_SIZE)
+    Constants.QUERY_BATCH_SIZE = int(config.get('query_batch_size', Constants.QUERY_BATCH_SIZE))
+    Constants.FAST_SYNC = config.get('fast_sync', "true") == "true"
+
+    is_exist = os.path.exists(TEMP_DATA_DIRECTORY)
+    if not is_exist:
+        os.makedirs(TEMP_DATA_DIRECTORY)
 
     non_binlog_catalog = get_non_binlog_streams(mysql_conn, catalog, config, state)
     binlog_catalog = get_binlog_streams(mysql_conn, catalog, config, state)

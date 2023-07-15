@@ -7,6 +7,7 @@ from singer import metadata
 
 class Constants:
     QUERY_BATCH_SIZE = 50000
+    FAST_SYNC = True
 
 def write_schema_message(catalog_entry, bookmark_properties=None):
     if bookmark_properties is None:

@@ -88,7 +88,7 @@ class MySQLConnection(pymysql.connections.Connection):
             "password": config["password"],
             "host": config["host"],
             "port": int(config["port"]),
-            "cursorclass": config.get("cursorclass") or pymysql.cursors.SSCursor,
+            "cursorclass": config.get("cursorclass") or pymysql.cursors.Cursor,
             "connect_timeout": CONNECT_TIMEOUT_SECONDS,
             "charset": "utf8",
         }

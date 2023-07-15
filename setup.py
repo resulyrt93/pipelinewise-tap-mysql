@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(name='northstar-tap-mysql',
-      version='1.5.8',
+      version='1.5.15',
       description='Singer.io tap for extracting data from MySQL & MariaDB - Northstar compatible',
       long_description=long_description,
       long_description_content_type='text/markdown',
@@ -24,6 +24,8 @@ setup(name='northstar-tap-mysql',
           'mysql-replication==0.40',
           'plpygis==0.2.1',
           'tzlocal==2.1',
+          'pandas==2.0.3',
+          'pyarrow==12.0.1',
       ],
       extras_require={
           'test': [

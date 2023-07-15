@@ -2,14 +2,19 @@
 # pylint: disable=missing-function-docstring,too-many-arguments,too-many-locals
 import copy
 import datetime
+import uuid
+
+import pandas as pd
 import singer
 import time
 
-from singer import metadata, utils, metrics
+from singer import metadata, utils, metrics, BatchMessage
 
 from tap_mysql.stream_utils import get_key_properties, Constants
 
 LOGGER = singer.get_logger('tap_mysql')
+
+TEMP_DATA_DIRECTORY = "/tmp/meltano_temp_data/"
 
 
 def escape(string):
@@ -98,7 +103,7 @@ def row_to_singer_record(catalog_entry, version, row, columns, time_extracted):
         if isinstance(elem, datetime.datetime):
             row_to_persist += (elem.isoformat(),)
 
-        elif elem == '0000-00-00 00:00:00' and property_format == 'date-time':
+        elif elem == '0000-00-00 00:00:00' or elem == '0000-00-00':
             row_to_persist += (None,)
 
         elif isinstance(elem, datetime.date):
@@ -153,10 +158,9 @@ def result_generator(query, params, cursor):
         cursor.execute(batch_query, params)
 
         rows = cursor.fetchall()
-        for row in rows:
-            yield row
-
+        LOGGER.info('Query executed')
         fetched_batch += 1
+        yield rows
 
 
 def sync_query(cursor, catalog_entry, state, select_sql, columns, stream_version, params):
@@ -177,14 +181,48 @@ def sync_query(cursor, catalog_entry, state, select_sql, columns, stream_version
         counter.tags['database'] = database_name
         counter.tags['table'] = catalog_entry.table
 
-        for row in result_generator(query=query_string, params=params, cursor=cursor):
-            counter.increment()
-            record_message = row_to_singer_record(catalog_entry,
-                                                  stream_version,
-                                                  row,
-                                                  columns,
-                                                  time_extracted)
-            singer.write_message(record_message)
+        for rows in result_generator(query=query_string, params=params, cursor=cursor):
+            if len(rows) == 0:
+                continue
+
+            if Constants.FAST_SYNC:
+                records = [
+                    row_to_singer_record(
+                        catalog_entry, stream_version, row, columns, time_extracted
+                    ).asdict().get("record")
+                    for row in rows
+                ]
+                df = pd.DataFrame.from_records(records)
+                file_path = f"{TEMP_DATA_DIRECTORY}data_{str(uuid.uuid4())}.parquet"
+                df.to_parquet(file_path, engine="pyarrow")
+
+                message = BatchMessage(
+                    stream=catalog_entry.stream,
+                    filepath=file_path,
+                    batch_size=len(rows),
+                    time_extracted=time_extracted
+                )
+                singer.write_message(message)
+                counter.increment(len(rows))
+                if len(rows) > 0:
+                    last_row = rows[-1]
+
+                record_message = row_to_singer_record(
+                    catalog_entry,
+                    stream_version,
+                    last_row,
+                    columns,
+                    time_extracted,
+                )
+            else:
+                for row in rows:
+                    counter.increment()
+                    record_message = row_to_singer_record(catalog_entry,
+                                                          stream_version,
+                                                          row,
+                                                          columns,
+                                                          time_extracted)
+                    singer.write_message(record_message)
 
         if replication_method in {'FULL_TABLE', 'LOG_BASED'}:
             key_properties = get_key_properties(catalog_entry)
