@@ -9,6 +9,23 @@ class Constants:
     QUERY_BATCH_SIZE = 50000
     FAST_SYNC = True
 
+
+def replace_select_with_count(query_string):
+    # Split the query into different parts
+    query_parts = query_string.split('FROM', 1)
+
+    if len(query_parts) != 2:
+        raise ValueError("Invalid query string")
+
+    select_part, rest_of_query = query_parts
+
+    # Replace the select part with "COUNT(*)"
+    new_select_part = "COUNT(*)"
+    new_query = f"SELECT {new_select_part} FROM {rest_of_query}"
+
+    return new_query
+
+
 def write_schema_message(catalog_entry, bookmark_properties=None):
     if bookmark_properties is None:
         bookmark_properties = []
