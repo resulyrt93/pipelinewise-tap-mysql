@@ -101,14 +101,16 @@ def row_to_singer_record(catalog_entry, version, row, columns, time_extracted):
         property_type = catalog_entry.schema.properties[columns[idx]].type
         property_format = catalog_entry.schema.properties[columns[idx]].format
 
-        if isinstance(elem, datetime.datetime):
-            row_to_persist += (elem.isoformat(),)
-
-        elif elem == '0000-00-00 00:00:00' or elem == '0000-00-00':
-            row_to_persist += (None,)
-
-        elif isinstance(elem, datetime.date):
-            row_to_persist += (elem.isoformat() + 'T00:00:00',)
+        if property_format == 'date-time' or property_format == 'date':
+            if isinstance(elem, datetime.datetime) or isinstance(elem, datetime.date):
+                row_to_persist += (elem,)
+            else:
+                try:
+                    datetime.datetime.fromisoformat(elem)
+                except:
+                    row_to_persist += (None,)
+                else:
+                    row_to_persist += (elem,)
 
         elif isinstance(elem, datetime.timedelta):
             if property_format == 'time':
@@ -116,7 +118,7 @@ def row_to_singer_record(catalog_entry, version, row, columns, time_extracted):
             else:
                 epoch = datetime.datetime.utcfromtimestamp(0)
                 timedelta_from_epoch = epoch + elem
-                row_to_persist += (timedelta_from_epoch.isoformat(),)
+                row_to_persist += (timedelta_from_epoch,)
 
         elif 'boolean' in property_type or property_type == 'boolean':
             if elem is None:

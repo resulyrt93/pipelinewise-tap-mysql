@@ -89,28 +89,34 @@ def get_max_pk_values(cursor, catalog_entry):
     return max_pk_values
 
 
-def generate_pk_clause(catalog_entry, state):
+def calculate_pk_windows(max_value: int, constant: int = 10000):
+    result = [0]
+    for i in range(constant, max_value, constant):
+        result.append(i)
+    if max_value not in result:
+        result.append(max_value)
+    return result
+
+
+def generate_pk_clauses(catalog_entry, state):
     key_properties = common.get_key_properties(catalog_entry)
-    escaped_columns = [common.escape(c) for c in key_properties]
 
     max_pk_values = singer.get_bookmark(state,
                                         catalog_entry.tap_stream_id,
                                         'max_pk_values')
 
-    last_pk_fetched = singer.get_bookmark(state,
-                                          catalog_entry.tap_stream_id,
-                                          'last_pk_fetched')
+    selected_key_property = key_properties[0]
+    escaped_key_property = common.escape(selected_key_property)
+    windows = calculate_pk_windows(max_pk_values[selected_key_property], 10**6)
+    clauses = []
+    for i in range(len(windows) - 1):
+        left_window = windows[i]
+        right_window = windows[i+1]
 
-    if last_pk_fetched:
-        pk_comparisons = [
-            f"({common.escape(pk)} > {last_pk_fetched[pk]} AND {common.escape(pk)} <= {max_pk_values[pk]})"
-            for pk in key_properties]
-    else:
-        pk_comparisons = [f"{common.escape(pk)} <= {max_pk_values[pk]}" for pk in key_properties]
+        sql = f' WHERE {escaped_key_property} > {str(left_window)} AND {escaped_key_property} <= {str(right_window)} ORDER BY {escaped_key_property} ASC'
+        clauses.append(sql)
 
-    sql = f' WHERE {" AND ".join(pk_comparisons)} ORDER BY {", ".join(escaped_columns)} ASC'
-
-    return sql
+    return clauses
 
 
 def sync_table(mysql_conn, catalog_entry, state, columns, stream_version):
@@ -143,6 +149,8 @@ def sync_table(mysql_conn, catalog_entry, state, columns, stream_version):
         with open_conn.cursor() as cur:
             select_sql = common.generate_select_sql(catalog_entry, columns)
 
+            pk_clauses = ['']
+
             if key_props_are_auto_incrementing:
                 LOGGER.info("Detected auto-incrementing primary key(s) - will replicate incrementally")
                 max_pk_values = singer.get_bookmark(state,
@@ -157,20 +165,20 @@ def sync_table(mysql_conn, catalog_entry, state, columns, stream_version):
                                                   'max_pk_values',
                                                   max_pk_values)
 
-                    pk_clause = generate_pk_clause(catalog_entry, state)
-
-                    select_sql += pk_clause
+                    pk_clauses = generate_pk_clauses(catalog_entry, state)
 
             params = {}
 
-            # pylint:disable=duplicate-code
-            common.sync_query(cur,
-                              catalog_entry,
-                              state,
-                              select_sql,
-                              columns,
-                              stream_version,
-                              params)
+            for pk_clause in pk_clauses:
+                query = select_sql + pk_clause
+                # pylint:disable=duplicate-code
+                common.sync_query(cur,
+                                  catalog_entry,
+                                  state,
+                                  query,
+                                  columns,
+                                  stream_version,
+                                  params)
 
     # clear max pk value and last pk fetched upon successful sync
     singer.clear_bookmark(state, catalog_entry.tap_stream_id, 'max_pk_values')
