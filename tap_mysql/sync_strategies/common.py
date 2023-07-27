@@ -95,6 +95,10 @@ def generate_select_sql(catalog_entry, columns):
     return select_sql
 
 
+def check_max_timestamp(datetime: datetime):
+    return None if datetime > pd.Timestamp.max else datetime
+
+
 def row_to_singer_record(catalog_entry, version, row, columns, time_extracted):
     row_to_persist = ()
     for idx, elem in enumerate(row):
@@ -103,18 +107,18 @@ def row_to_singer_record(catalog_entry, version, row, columns, time_extracted):
 
         if property_format == 'date-time' or property_format == 'date':
             if isinstance(elem, datetime.datetime) or isinstance(elem, datetime.date):
-                row_to_persist += (elem,)
+                row_to_persist += (check_max_timestamp(elem),)
             else:
                 try:
                     datetime.datetime.fromisoformat(elem)
                 except:
                     row_to_persist += (None,)
                 else:
-                    row_to_persist += (elem,)
+                    row_to_persist += (check_max_timestamp(datetime.datetime.fromisoformat(elem)),)
 
         elif isinstance(elem, datetime.timedelta):
             if property_format == 'time':
-                row_to_persist += (str(elem),) # this should convert time column into 'HH:MM:SS' formatted string
+                row_to_persist += (str(elem),)  # this should convert time column into 'HH:MM:SS' formatted string
             else:
                 epoch = datetime.datetime.utcfromtimestamp(0)
                 timedelta_from_epoch = epoch + elem
