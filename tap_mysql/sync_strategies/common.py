@@ -96,7 +96,7 @@ def generate_select_sql(catalog_entry, columns):
 
 
 def check_max_timestamp(datetime: datetime):
-    return None if pd.Timestamp.min > datetime > pd.Timestamp.max else datetime
+    return None if datetime < pd.Timestamp.min or pd.Timestamp.max < datetime else datetime
 
 
 def row_to_singer_record(catalog_entry, version, row, columns, time_extracted):
