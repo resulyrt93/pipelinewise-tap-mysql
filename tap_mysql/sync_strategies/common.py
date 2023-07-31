@@ -4,6 +4,7 @@ import copy
 import datetime
 import math
 import uuid
+from typing import Union
 
 import pandas as pd
 import singer
@@ -95,8 +96,15 @@ def generate_select_sql(catalog_entry, columns):
     return select_sql
 
 
-def check_max_timestamp(datetime: datetime):
-    return None if datetime < pd.Timestamp.min or pd.Timestamp.max < datetime else datetime
+def check_max_timestamp(_datetime: Union[datetime.datetime, datetime.date]):
+    _min = pd.Timestamp.min
+    _max = pd.Timestamp.max
+
+    if type(_datetime) == datetime.date:
+        _min = _min.date()
+        _max = _max.date()
+
+    return None if _datetime < _min or _max < _datetime else _datetime
 
 
 def row_to_singer_record(catalog_entry, version, row, columns, time_extracted):
